@@ -210,7 +210,7 @@ int main() {
 
     
     
-    TaskHandle_t hSensorTask, hPrintTask, hUSB, hIMUTask = NULL;
+    TaskHandle_t hSensorTask, hPrintTask, hUSB, hIMUTaskv = NULL;
 
     // Exercise 4: Uncomment this xTaskCreate to create the task that enables dual USB communication.
     // Tehtävä 4: Poista tämän xTaskCreate-rivin kommentointi luodaksesi tehtävän,
