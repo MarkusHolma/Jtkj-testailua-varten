@@ -13,74 +13,42 @@
 #define DEFAULT_STACK_SIZE 2048
 #define CDC_ITF_TX      1
 
+// #define BUTTON1         SW1_PIN
+// #define BUTTON2         SW2_PIN
+
 enum state { WAITING = 1, READY = 2, IDLE = 3};
 enum state programState = WAITING;
 
 uint32_t ambientLight;
 char gyro_result;
 float ax, ay, az, gx, gy, gz, t;
-
-/*
-void imu_task(void *pvParameters) {
-    (void)pvParameters;
-    
-    float ax, ay, az, gx, gy, gz, t;
-    // Setting up the sensor. 
-    if (init_ICM42670() == 0) {
-        printf("ICM-42670P initialized successfully!\n");
-        if (ICM42670_start_with_default_values() != 0){
-            printf("ICM-42670P could not initialize accelerometer or gyroscope");
-        }
-        /*int _enablegyro = ICM42670_enable_accel_gyro_ln_mode();
-        printf ("Enable gyro: %d\n",_enablegyro);
-        int _gyro = ICM42670_startGyro(ICM42670_GYRO_ODR_DEFAULT, ICM42670_GYRO_FSR_DEFAULT);
-        printf ("Gyro return:  %d\n", _gyro);
-        int _accel = ICM42670_startAccel(ICM42670_ACCEL_ODR_DEFAULT, ICM42670_ACCEL_FSR_DEFAULT);
-        printf ("Accel return:  %d\n", _accel);
-    } else {
-        printf("Failed to initialize ICM-42670P.\n");
-    }
-    // Start collection data here. Infinite loop. 
-    while (1)
-    {
-            
-            printf("Gyro: X=%f, Y=%f, Z=%f\n", ax, ay, az, gx, gy, gz, t);
-            /*printf("Accel: X=%f, Y=%f, Z=%f | Gyro: X=%f, Y=%f, Z=%f| Temp: %2.2f°C\n", ax, ay, az, gx, gy, gz, t);
-        } else {
-            printf("Failed to read imu data\n");
-        }
-        vTaskDelay(pdMS_TO_TICKS(500));
-    }
-
-}*/
+bool print_gap = false;
+bool print_end = false;
 
 static void btn_fxn(uint gpio, uint32_t eventMask) {
-    toggle_led();
-    /*if(programState == IDLE){
-        printf("jatketaan\n");
-        programState = WAITING;
-    }*/
-    if(programState == WAITING){
-        printf("Mennään tauolle\n");
-        programState = IDLE;
+    if(gpio == BUTTON1){
 
-    }
-        else if(programState == READY){
-            printf("Mennään tauolle\n");
+        if(programState != IDLE){
+            //printf("Mennään tauolle\n");
+            toggle_led();
             programState = IDLE;
-        }
-            else {
-            printf("Jatketaan\n");
+
+        } else {
+            //printf("Jatketaan\n");
+            toggle_led();
             programState = WAITING;
-            }
+        }
+    }
+    else if(gpio == BUTTON2) {
+        if(programState != IDLE){
+            print_gap = true;
+        }
 
+        else{
+            print_end = true;
+        }
+    }
 }
-
-
-static void btn_fxn2(uint gpio, uint32_t eventMask) {
-    printf("    ");
-}
-
 
 static void sensor_task(void *arg){
 (void)arg;
@@ -120,6 +88,20 @@ static void print_task(void *arg){
     (void)arg;
     
     while(1){
+        if(print_gap){
+            printf(" ");
+            sleep_ms(200);
+            print_gap = false;
+
+        }
+
+        if(print_end){
+            printf("  \n");
+            sleep_ms(200);
+            print_end = false;
+
+        }
+
         if(programState == READY) {
             if(gy <= (-150)){
                 printf("-");
@@ -160,9 +142,10 @@ int main() {
     init_led();
 
 
-    gpio_set_dir(LED1, GPIO_OUT);
-    gpio_set_irq_enabled_with_callback(BUTTON1, GPIO_IRQ_EDGE_FALL, true, btn_fxn);
-    gpio_set_irq_enabled_with_callback(BUTTON2, GPIO_IRQ_EDGE_RISE, true, btn_fxn2);
+    gpio_set_dir(LED1, GPIO_OUT); 
+    gpio_set_irq_enabled_with_callback(BUTTON2, GPIO_IRQ_EDGE_FALL, true, btn_fxn);
+    gpio_set_irq_enabled(BUTTON1, GPIO_IRQ_EDGE_FALL, true);
+
     
     
     TaskHandle_t hsensorTask, hprintTask = NULL;
