@@ -1,4 +1,16 @@
-#include <math.h>
+/*
+TIETOKONEJÄRJESTELMÄT - TIER 1
+
+Tekijät:
+Matti Damski
+Markus Holma
+Heikki Komonen
+
+Generatiivista tekoälyä ei ole käytetty tämän projektin koodin tuotannossa.
+Tekoälyä on käytetty vain projektin ohjeiden tiivistämiseen.
+
+*/
+
 #include <stdio.h>
 #include <string.h>
 
@@ -12,19 +24,17 @@
 
 #define DEFAULT_STACK_SIZE 2048
 #define CDC_ITF_TX      1
-
-// #define BUTTON1         SW1_PIN
-// #define BUTTON2         SW2_PIN
-
+// Erilaisten tiloje määrittelyitä
 enum state { WAITING = 1, READY = 2, IDLE = 3};
 enum state programState = WAITING;
-
+//muuttujien määrittelyt
 uint32_t ambientLight;
 char gyro_result;
 float ax, ay, az, gx, gy, gz, t;
 bool print_gap = false;
 bool print_end = false;
 
+//Nappien 1 ja 2 toiminta eri tiloissa( Keskeytyskäsittelijä )
 static void btn_fxn(uint gpio, uint32_t eventMask) {
     if(gpio == BUTTON1){
 
@@ -49,10 +59,10 @@ static void btn_fxn(uint gpio, uint32_t eventMask) {
         }
     }
 }
-
+//Käytetään sensor_taskia anturidatan keräämiseen(Löytyy esimerkeistä, examples/hat_imu_ex)
 static void sensor_task(void *arg){
 (void)arg;
-
+//Määrittelyt
 init_ICM42670();
     if (init_ICM42670() == 0) {
         printf("ICM-42670P initialized successfully!\n");
@@ -69,6 +79,7 @@ init_ICM42670();
     } else {
         printf("Failed to initialize ICM-42670P.\n");
     }
+    //luetaan data
 for(;;) {
     if(programState == WAITING){
         if (ICM42670_read_sensor_data(&ax, &ay, &az, &gx, &gy, &gz, &t) == 0) {
@@ -83,7 +94,7 @@ for(;;) {
 }
 
 
-
+//Käytetään print_taskia pisteiden ja pilkkujen ja välien ja lähetyksen tulostamiseen
 static void print_task(void *arg){
     (void)arg;
     
@@ -114,50 +125,32 @@ static void print_task(void *arg){
                 sleep_ms(1000);
             
             }
-        //printf("Accel: X=%f, Y=%f, Z=%f | Gyro: X=%f, Y=%f, Z=%f| Temp: %2.2f°C\n", ax, ay, az, gx, gy, gz, t);
         programState = WAITING;
         }
 
-
-        // Do not remove this
         vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 
 
 int main() {
-
     stdio_init_all();
-
     // Uncomment this lines if you want to wait till the serial monitor is connected
     while (!stdio_usb_connected()){
         sleep_ms(10);
     }
-    
     init_hat_sdk();
     sleep_ms(300); //Wait some time so initialization of USB and hat is done.
-
+    //nappien määrittely
     init_button1();
     init_button2();
     init_led();
-
 
     gpio_set_dir(LED1, GPIO_OUT); 
     gpio_set_irq_enabled_with_callback(BUTTON2, GPIO_IRQ_EDGE_FALL, true, btn_fxn);
     gpio_set_irq_enabled(BUTTON1, GPIO_IRQ_EDGE_FALL, true);
 
-    
-    
     TaskHandle_t hsensorTask, hprintTask = NULL;
-
-    /*
-    xTaskCreate(usbTask, "usb", 2048, NULL, 3, &hUSB);
-    #if (configNUMBER_OF_CORES > 1)
-        vTaskCoreAffinitySet(hUSB, 1u << 0);
-    #endif
-    */
-    //xTaskCreate(imu_task, "IMUTask", 1024, NULL, 2, &hIMUTask);
-
 
     // Create the tasks with xTaskCreate
     BaseType_t result = xTaskCreate(sensor_task, // (en) Task function
@@ -182,10 +175,8 @@ int main() {
         printf("Print Task creation failed\n");
         return 0;
     }
-
     // Start the scheduler (never returns)
     vTaskStartScheduler();
-    
     // Never reach this line.
     return 0;
 }
